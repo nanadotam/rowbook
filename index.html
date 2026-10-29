@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📖</text></svg>">
+<title>Rowbook — read spreadsheets like a book</title>
+<script>document.documentElement.dataset.mode = localStorage.getItem("rowbook-mode") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")</script>
+<style>
+  :root {
+    --bg: #f5f5f7; --panel: #ffffff; --ink: #1d1d1f; --muted: #6e6e73; --line: #e3e3e8;
+    --accent: #0a66d8; --chip: #ececf0; --shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.06);
+  }
+  [data-mode="dark"] {
+    --bg: #111113; --panel: #1c1c1f; --ink: #f2f2f4; --muted: #9a9aa2; --line: #2e2e33;
+    --accent: #4c9bff; --chip: #2a2a2f; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Arial, sans-serif;
+    background: var(--bg); color: var(--ink); display: flex; flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, select, input { font: inherit; color: inherit; }
+  button, select {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; cursor: pointer;
+  }
+  button:hover, select:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  input[type=search], input[type=url] {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; min-width: 0;
+  }
+  label { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+
+  header { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  .brand { font-weight: 800; font-size: 18px; letter-spacing: -.02em; margin-right: auto; }
+  .brand span { color: var(--muted); font-weight: 500; font-size: 13px; letter-spacing: 0; margin-left: 8px; }
+
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 18px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+  .toolbar input[type=search] { flex: 1 1 220px; }
+  .spacer { flex: 1; }
+  details.fields { position: relative; }
+  details.fields summary { list-style: none; cursor: pointer; border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; background: var(--panel); }
+  details.fields .menu {
+    position: absolute; z-index: 5; top: 110%; left: 0; width: 320px; max-height: 60vh; overflow: auto;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; box-shadow: var(--shadow);
+  }
+  details.fields .menu label { color: var(--ink); padding: 4px 6px; font-size: 13px; }
+
+  .chips { display: flex; gap: 6px; padding: 10px 18px 0; overflow-x: auto; scrollbar-width: none; }
+  .chip { white-space: nowrap; border: none; background: var(--chip); border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+  .chip b { font-weight: 600; margin-left: 4px; color: var(--muted); }
+  .chip.on { background: var(--ink); color: var(--bg); }
+  .chip.on b { color: inherit; opacity: .7; }
+
+  main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .strip {
+    flex: 1; min-height: 0; display: flex; gap: 18px; padding: 16px 18px 20px; overflow-x: auto;
+    scroll-snap-type: x mandatory; scroll-padding: 0 18px;
+  }
+  .card {
+    flex: 0 0 min(680px, calc(100vw - 36px)); scroll-snap-align: start; background: var(--panel); border-radius: 14px;
+    box-shadow: var(--shadow); overflow-y: auto; padding: 34px 38px 40px;
+  }
+  .card h2 { font-size: 26px; line-height: 1.15; letter-spacing: -.025em; margin: 0 0 4px; }
+  .card .meta { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
+  .card .q { font-weight: 650; margin: 18px 0 3px; }
+  .card .a { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .card .a a { color: var(--accent); }
+  .card .actions { display: flex; gap: 8px; margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); }
+  mark { background: #ffe58a; color: #1d1d1f; border-radius: 3px; }
+
+  .status { display: flex; align-items: center; gap: 10px; padding: 0 18px 12px; color: var(--muted); font-size: 13px; }
+
+  .empty { flex: 1; display: grid; place-items: center; padding: 30px; }
+  .drop {
+    width: min(620px, 100%); border: 2px dashed var(--line); border-radius: 18px; padding: 44px 34px; text-align: center; background: var(--panel);
+  }
+  .drop.over { border-color: var(--accent); }
+  .drop h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.03em; }
+  .drop p { color: var(--muted); margin: 6px 0; }
+  .drop .row { display: flex; gap: 8px; margin-top: 18px; }
+  .drop .row input { flex: 1; }
+  .privacy { font-size: 13px; margin-top: 20px !important; }
+  .error { color: #d93025; font-size: 13px; min-height: 1.2em; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Rowbook<span>read spreadsheets like a book</span></div>
+  <label>PDF theme
+    <select id="theme">
+      <option value="apple">Apple</option>
+      <option value="notion">Notion</option>
+      <option value="github">GitHub</option>
+      <option value="minimal">Minimal</option>
+      <option value="amoako-1">Amoako</option>
+    </select>
+  </label>
+  <button id="openBtn">Open file…</button>
+  <button id="modeBtn" title="Toggle dark mode">◐</button>
+  <input type="file" id="file" accept=".csv,.tsv,.xlsx,.xls,.xlsm,.ods" hidden>
+</header>
+
+<main>
+  <section class="empty" id="empty">
+    <div class="drop" id="drop">
+      <h1>Drop a spreadsheet here</h1>
+      <p>CSV or Excel. Every row becomes a page you can scroll through sideways, grouped by whatever column matters.</p>
+      <p><button class="primary" id="openBtn2">Choose a file</button></p>
+      <div class="row">
+        <input type="url" id="sheetUrl" placeholder="…or paste a Google Sheets link (shared as “anyone with the link”)">
+        <button id="sheetBtn">Load</button>
+      </div>
+      <p class="error" id="error"></p>
+      <p class="privacy">🔒 Your file is read by this browser tab only. Nothing is uploaded or saved anywhere, and closing the tab clears it.</p>
+    </div>
+  </section>
+
+  <section id="viewer" hidden style="display:flex;flex-direction:column;flex:1;min-height:0">
+    <div class="toolbar">
+      <label>Group by <select id="groupBy"></select></label>
+      <label>Title <select id="titleCol"></select></label>
+      <input type="search" id="search" placeholder="Search a name, ID or anything…">
+      <details class="fields"><summary>Fields ▾</summary><div class="menu" id="fieldMenu"></div></details>
+      <select id="jump" title="Jump to a row"></select>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="strip" id="strip" tabindex="0"></div>
+    <div class="status">
+      <span id="count"></span>
+      <span class="spacer"></span>
+      <button id="prev" title="Previous (←)">←</button>
+      <button id="next" title="Next (→)">→</button>
+      <button id="mdBtn">Download .md</button>
+      <button class="primary" id="groupPdf">PDF of this group</button>
+    </div>
+  </section>
+</main>
+
+<script src="vendor/xlsx.full.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const state = { name: "", columns: [], rows: [], hidden: new Set(), groupBy: "", titleCol: "", group: null, query: "", view: [] };
+
+// ── Loading ──────────────────────────────────────────────────────────────────
+
+function loadWorkbook(data, name) {
+  const text = /\.(csv|tsv|txt)$/i.test(name) || name === "Google Sheet";
+  const wb = text ? XLSX.read(new TextDecoder().decode(data), { type: "string", dense: true })
+                  : XLSX.read(data, { type: "array", cellDates: true, dense: true });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: "" })
+    .filter(r => r.some(c => String(c).trim()));
+  if (grid.length < 2) throw new Error("That sheet looks empty.");
+  const header = grid[0].map((h, i) => String(h).trim() || `Column ${i + 1}`);
+  const rows = grid.slice(1).map(r => Object.fromEntries(header.map((h, i) => [h, String(r[i] ?? "").trim()])));
+  // drop columns nobody filled in
+  state.columns = header.filter(h => rows.some(r => r[h]));
+  state.rows = rows;
+  state.name = name.replace(/\.[^.]+$/, "");
+  state.hidden = new Set(state.columns.filter(c => /^(timestamp|email address|score)$/i.test(c)));
+  state.groupBy = guessGroup();
+  state.titleCol = state.columns.find(c => /full name|^name$|name/i.test(c)) || state.columns[0];
+  state.group = null;
+  state.query = "";
+  $("search").value = "";
+  $("empty").hidden = true;
+  $("viewer").hidden = false;
+  setupControls();
+  render();
+}
+
+function distinct(col) { return new Set(state.rows.map(r => r[col]).filter(Boolean)); }
+
+function guessGroup() {
+  const candidates = state.columns.filter(c => { const n = distinct(c).size; return n > 1 && n <= 30; });
+  return candidates.find(c => /committee|category|department|role|track|position|interested|choice/i.test(c))
+    || candidates[0] || "";
+}
+
+async function readFile(file) {
+  showError("");
+  try { loadWorkbook(new Uint8Array(await file.arrayBuffer()), file.name); }
+  catch (e) { showError("Couldn't read that file: " + e.message); }
+}
+
+async function loadSheet(url) {
+  showError("");
+  const m = url.match(/\/spreadsheets\/d\/([\w-]+)/);
+  const gid = url.match(/[#&?]gid=(\d+)/);
+  const csvUrl = m ? `https://docs.google.com/spreadsheets/d/${m[1]}/export?format=csv${gid ? "&gid=" + gid[1] : ""}` : url;
+  try {
+    const res = await fetch(csvUrl);
+    if (!res.ok) throw new Error("the sheet isn't shared as “anyone with the link”");
+    loadWorkbook(new Uint8Array(await res.arrayBuffer()), "Google Sheet");
+  } catch (e) {
+    showError("Couldn't load that link (" + e.message + "). In Sheets, use File → Download → CSV and drop the file here instead.");
+  }
+}
+
+function showError(msg) { $("error").textContent = msg; }
+
+// ── Controls ─────────────────────────────────────────────────────────────────
+
+function options(sel, values, current, blank) {
+  sel.innerHTML = (blank ? `<option value="">${blank}</option>` : "") +
+    values.map(v => `<option${v === current ? " selected" : ""}>${esc(v)}</option>`).join("");
+}
+
+function setupControls() {
+  options($("groupBy"), state.columns.filter(c => distinct(c).size > 1 && distinct(c).size <= 60), state.groupBy, "No grouping");
+  options($("titleCol"), state.columns, state.titleCol);
+  $("fieldMenu").innerHTML = state.columns.map(c =>
+    `<label><input type="checkbox" data-col="${esc(c)}"${state.hidden.has(c) ? "" : " checked"}> ${esc(c)}</label>`).join("");
+}
+
+function filtered() {
+  const q = state.query.toLowerCase();
+  return state.rows.filter(r =>
+    (state.group === null || (r[state.groupBy] || "(blank)") === state.group) &&
+    (!q || Object.values(r).some(v => v.toLowerCase().includes(q))));
+}
+
+function render() {
+  // chips
+  const chips = $("chips");
+  if (state.groupBy) {
+    const counts = {};
+    state.rows.forEach(r => { const k = r[state.groupBy] || "(blank)"; counts[k] = (counts[k] || 0) + 1; });
+    const keys = Object.keys(counts).sort();
+    chips.innerHTML = `<button class="chip${state.group === null ? " on" : ""}" data-all>All<b>${state.rows.length}</b></button>` +
+      keys.map(k => `<button class="chip${state.group === k ? " on" : ""}" data-g="${esc(k)}">${esc(k)}<b>${counts[k]}</b></button>`).join("");
+  } else chips.innerHTML = "";
+
+  state.view = filtered();
+  const fields = visibleFields();
+  $("strip").innerHTML = state.view.length ? state.view.map((r, i) => `
+    <article class="card" data-i="${i}">
+      <h2>${hl(r[state.titleCol] || "Untitled")}</h2>
+      <div class="meta">${[state.groupBy && r[state.groupBy], `${i + 1} of ${state.view.length}`].filter(Boolean).map(esc).join(" · ")}</div>
+      ${fields.filter(c => r[c]).map(c => `<p class="q">${esc(c)}</p><p class="a">${linkify(hl(r[c]))}</p>`).join("")}
+      <div class="actions"><button data-pdf="${i}">PDF of this page</button></div>
+    </article>`).join("") : `<p style="color:var(--muted);padding:20px">Nothing matches.</p>`;
+  $("strip").scrollLeft = 0;
+  options($("jump"), state.view.map(r => r[state.titleCol] || "Untitled"), null, `Jump to… (${state.view.length})`);
+  updateCount();
+}
+
+function visibleFields() { return state.columns.filter(c => !state.hidden.has(c) && c !== state.titleCol); }
+
+function current() {
+  const strip = $("strip"), cards = [...strip.children];
+  const x = strip.scrollLeft + 1;
+  let idx = 0;
+  cards.forEach((c, i) => { if (c.offsetLeft - strip.offsetLeft <= x + 20) idx = i; });
+  return idx;
+}
+
+function go(i) {
+  const card = $("strip").children[i];
+  if (card && card.classList.contains("card")) card.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+}
+
+function updateCount() {
+  const n = state.view.length;
+  $("count").textContent = n ? `${current() + 1} of ${n}${state.group !== null ? " in " + state.group : ""}` : "0 rows";
+}
+
+// ── Markdown + PDF (same look as mdpdf: the themes are mdpdf's own CSS) ──────
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function hl(s) {
+  const out = esc(s);
+  if (!state.query) return out;
+  const q = esc(state.query).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return out.replace(new RegExp(q, "gi"), m => `<mark>${m}</mark>`);
+}
+function linkify(html) { return html.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>'); }
+
+function stats(rows) {
+  // a breakdown for the group column plus any short-answer columns (year, major, nationality…)
+  const cols = [state.groupBy, ...state.columns.filter(c => c !== state.groupBy && !state.hidden.has(c)
+    && /year|major|level|nationality|gender|class/i.test(c))].filter(Boolean);
+  return cols.map(c => {
+    const counts = {};
+    rows.forEach(r => { const k = r[c] || "(blank)"; counts[k] = (counts[k] || 0) + 1; });
+    return { col: c, counts: Object.entries(counts).sort((a, b) => b[1] - a[1]) };
+  }).filter(s => s.counts.length > 1 || s.col === state.groupBy);
+}
+
+function title(rows) {
+  const scope = state.group !== null ? state.group : state.name;
+  return rows.length === 1 ? rows[0][state.titleCol] || "Untitled" : `${scope} — ${rows.length} responses`;
+}
+
+function toMarkdown(rows) {
+  const md = s => String(s).replace(/([\\`*_<>#])/g, "\\$1");
+  const fields = visibleFields();
+  let out = "";
+  if (rows.length > 1) {
+    out += `# ${md(title(rows))}\n\n`;
+    stats(rows).forEach(s => {
+      out += `### ${md(s.col)}\n\n` + s.counts.map(([k, n]) => `- ${md(k)}: **${n}**`).join("\n") + "\n\n";
+    });
+  }
+  rows.forEach(r => {
+    if (rows.length > 1) out += `<div style="page-break-before: always"></div>\n\n`;
+    out += `## ${md(r[state.titleCol] || "Untitled")}\n\n`;
+    fields.filter(c => r[c]).forEach(c => {
+      out += `**${md(c)}**\n\n${md(r[c]).replace(/\n/g, "  \n")}\n\n`;
+    });
+  });
+  return out;
+}
+
+function toHtml(rows) {
+  const fields = visibleFields();
+  let out = "";
+  if (rows.length > 1) {
+    out += `<h1>${esc(title(rows))}</h1>`;
+    stats(rows).forEach(s => {
+      out += `<h3>${esc(s.col)}</h3><ul>` + s.counts.map(([k, n]) => `<li>${esc(k)}: <strong>${n}</strong></li>`).join("") + "</ul>";
+    });
+  }
+  rows.forEach(r => {
+    out += `<section class="rb-page"><h2>${esc(r[state.titleCol] || "Untitled")}</h2>`;
+    fields.filter(c => r[c]).forEach(c => {
+      out += `<p><strong>${esc(c)}</strong></p><p class="rb-a">${linkify(esc(r[c]))}</p>`;
+    });
+    out += "</section>";
+  });
+  return out;
+}
+
+function printPdf(rows) {
+  const frame = document.createElement("iframe");
+  frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+  frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title(rows))}</title>
+    <link rel="stylesheet" href="themes/${$("theme").value}.css">
+    <style>
+      @page { size: A4; margin: 12mm; }
+      body { max-width: none; padding: 0; }
+      .rb-a { white-space: pre-wrap; margin-top: -0.4em; }
+      ${rows.length > 1 ? ".rb-page { break-before: page; }" : ""}
+      .rb-page > h2:first-child { margin-top: 0; }
+      p strong { break-after: avoid; }
+    </style></head><body>${toHtml(rows)}</body></html>`;
+  frame.onload = () => {
+    // give local fonts a beat to settle, then open the print dialog (choose "Save as PDF")
+    setTimeout(() => { frame.contentWindow.focus(); frame.contentWindow.print(); setTimeout(() => frame.remove(), 1000); }, 300);
+  };
+  document.body.appendChild(frame);
+}
+
+function download(name, text) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "text/markdown" }));
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// ── Events ───────────────────────────────────────────────────────────────────
+
+$("openBtn").onclick = $("openBtn2").onclick = () => $("file").click();
+$("file").onchange = e => e.target.files[0] && readFile(e.target.files[0]);
+$("sheetBtn").onclick = () => $("sheetUrl").value.trim() && loadSheet($("sheetUrl").value.trim());
+$("sheetUrl").onkeydown = e => e.key === "Enter" && $("sheetBtn").click();
+
+["dragover", "dragenter"].forEach(t => document.addEventListener(t, e => { e.preventDefault(); $("drop").classList.add("over"); }));
+["dragleave", "drop"].forEach(t => document.addEventListener(t, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
+document.addEventListener("drop", e => e.dataTransfer.files[0] && readFile(e.dataTransfer.files[0]));
+
+$("modeBtn").onclick = () => {
+  const mode = document.documentElement.dataset.mode === "dark" ? "light" : "dark";
+  document.documentElement.dataset.mode = mode;
+  localStorage.setItem("rowbook-mode", mode);
+};
+$("theme").value = localStorage.getItem("rowbook-theme") || "apple";
+$("theme").onchange = () => localStorage.setItem("rowbook-theme", $("theme").value);
+
+$("groupBy").onchange = e => { state.groupBy = e.target.value; state.group = null; render(); };
+$("titleCol").onchange = e => { state.titleCol = e.target.value; render(); };
+$("search").oninput = e => { state.query = e.target.value.trim(); render(); };
+$("chips").onclick = e => {
+  const chip = e.target.closest(".chip");
+  if (!chip) return;
+  state.group = "all" in chip.dataset ? null : chip.dataset.g;
+  render();
+};
+$("fieldMenu").onchange = e => {
+  const col = e.target.dataset.col;
+  e.target.checked ? state.hidden.delete(col) : state.hidden.add(col);
+  const i = current(); render(); $("strip").children[i]?.scrollIntoView({ inline: "start", block: "nearest" });
+};
+$("jump").onchange = e => { if (e.target.selectedIndex > 0) go(e.target.selectedIndex - 1); e.target.selectedIndex = 0; };
+$("strip").onscroll = () => requestAnimationFrame(updateCount);
+$("strip").onclick = e => { const b = e.target.closest("[data-pdf]"); if (b) printPdf([state.view[+b.dataset.pdf]]); };
+$("prev").onclick = () => go(Math.max(0, current() - 1));
+$("next").onclick = () => go(Math.min(state.view.length - 1, current() + 1));
+$("groupPdf").onclick = () => state.view.length && printPdf(state.view);
+$("mdBtn").onclick = () => state.view.length && download(`${title(state.view).replace(/[\\/:*?"<>|]/g, "")}.md`, toMarkdown(state.view));
+
+document.addEventListener("keydown", e => {
+  if ($("viewer").hidden || /INPUT|SELECT/.test(e.target.tagName)) return;
+  if (e.key === "ArrowRight") { e.preventDefault(); $("next").click(); }
+  if (e.key === "ArrowLeft") { e.preventDefault(); $("prev").click(); }
+  if (e.key === "/") { e.preventDefault(); $("search").focus(); }
+});
+</script>
+</body>
+</html>
