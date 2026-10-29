@@ -132,21 +132,55 @@
   kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
   @keyframes slide { from { transform: translateX(40px); opacity: 0; } }
   @keyframes fade { from { opacity: 0; } }
+  /* ── Save dialog ── */
+  .dialog { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; }
+  .dialog .scrim { position: absolute; inset: 0; background: var(--scrim); animation: fade .15s; }
+  .dialog .box {
+    position: relative; width: min(1060px, 96vw); height: min(780px, 94vh); background: var(--panel); border-radius: 16px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.3); display: grid; grid-template-columns: 350px 1fr; overflow: hidden; animation: fade .15s;
+  }
+  .dialog .side { padding: 20px 22px 0; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; border-right: 1px solid var(--line); }
+  .dialog .dhead { display: flex; align-items: center; gap: 8px; }
+  .dialog h3 { margin: 0; font-size: 18px; letter-spacing: -.02em; flex: 1; }
+  .dialog .label { font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+  .dialog .tip { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .styles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .style { border: 1.5px solid var(--line); border-radius: 10px; padding: 5px 5px 6px; background: var(--panel); cursor: pointer; font-size: 11.5px; }
+  .style .aa { display: block; background: #fff; border-radius: 6px; padding: 6px 0 4px; margin-bottom: 5px; font-size: 16px; font-weight: 800; letter-spacing: -.02em; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+  .style .aa u { text-decoration: none; display: block; height: 0; margin: 4px 14px 0; }
+  .style.on { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .formats label { display: flex; gap: 10px; align-items: flex-start; padding: 8px 11px; border: 1.5px solid var(--line); border-radius: 10px; cursor: pointer; margin-bottom: 6px; }
+  .formats .label + label { margin-top: 0; }
+  .formats .label.sub { margin-top: 14px; }
+  .formats label:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent); }
+  .formats input { position: absolute; opacity: 0; pointer-events: none; }
+  .formats .ph { font-size: 22px; color: var(--accent); margin-top: 1px; }
+  .formats b { font-weight: 600; }
+  .formats small { display: block; color: var(--muted); font-size: 12px; line-height: 1.4; }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 13.5px; cursor: pointer; }
+  .foot { margin-top: auto; display: flex; gap: 8px; align-items: center; position: sticky; bottom: 0; background: var(--panel); padding: 12px 0 18px; border-top: 1px solid var(--line); }
+  .progress { flex: 1; font-size: 12.5px; color: var(--muted); }
+  .preview { position: relative; background: #e8e8ed; }
+  [data-mode="dark"] .preview { background: #2a2a2e; }
+  .preview iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .preview .busy { position: absolute; top: 12px; right: 14px; font-size: 12px; background: var(--panel); color: var(--muted); padding: 4px 10px; border-radius: 999px; box-shadow: var(--shadow); }
+  @media (max-width: 780px) { .dialog .box { grid-template-columns: 1fr; grid-template-rows: auto 55vh; height: 96vh; } }
+  .tinted { background: var(--tint-l) !important; }
+  [data-mode="dark"] .tinted { background: var(--tint-d) !important; }
+  .reader .sheet.tinted .bar { border-color: rgba(0,0,0,.06); }
+  .cdot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .swatches { display: flex; gap: 2px; align-items: center; margin-left: 4px; padding-left: 8px; border-left: 1px solid var(--line); }
+  .swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; padding: 0; cursor: pointer; background: none; display: grid; place-items: center; }
+  .swatch span { width: 15px; height: 15px; border-radius: 50%; display: block; }
+  .swatch:hover { border-color: var(--line); }
+  .swatch.on { border-color: var(--ink); }
+  .swatch.none span { box-shadow: inset 0 0 0 1.5px var(--muted); background: linear-gradient(135deg, transparent 45%, var(--muted) 45% 55%, transparent 55%); }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <header>
   <div class="brand"><img src="icon.svg" alt="">Rowbook <span class="file" id="fileName" hidden></span></div>
-  <label class="field" title="How downloaded PDFs look">PDF style
-    <select id="theme">
-      <option value="apple">Apple</option>
-      <option value="notion">Notion</option>
-      <option value="github">GitHub</option>
-      <option value="minimal">Minimal</option>
-      <option value="amoako-1">Amoako</option>
-    </select>
-  </label>
   <button class="btn" id="openBtn"><i class="ph ph-folder-open"></i> Open file</button>
   <button class="btn icon" id="modeBtn" title="Light / dark"><i class="ph ph-moon"></i></button>
   <input type="file" id="file" accept=".csv,.tsv,.xlsx,.xls,.xlsm,.ods" hidden>
@@ -173,6 +207,7 @@
       <div class="search"><i class="ph ph-magnifying-glass"></i><input type="search" id="search" placeholder="Find a name, ID or answer   ( / )"></div>
       <label class="field"><i class="ph ph-squares-four"></i> Group by <select id="groupBy"></select></label>
       <label class="field"><i class="ph ph-identification-card"></i> Name <select id="titleCol"></select></label>
+      <label class="field"><i class="ph ph-paint-bucket"></i> Colour <select id="colourFilter"></select></label>
       <details class="fields">
         <summary class="btn"><i class="ph ph-eye-slash"></i> Hide fields</summary>
         <div class="menu"><p>Unticked fields are hidden on screen and in PDFs.</p><div id="fieldMenu"></div></div>
@@ -185,8 +220,7 @@
       <button class="btn icon ghost" id="prev" title="Previous (←)"><i class="ph ph-caret-left"></i></button>
       <button class="btn icon ghost" id="next" title="Next (→)"><i class="ph ph-caret-right"></i></button>
       <span class="spacer"></span>
-      <button class="btn" id="mdBtn" title="A plain-text copy (works with mdpdf)"><i class="ph ph-file-text"></i> Text file</button>
-      <button class="btn primary" id="groupPdf"><i class="ph ph-file-pdf"></i> <span id="groupPdfLabel">Save all as PDF</span></button>
+      <button class="btn primary" id="saveBtn"><i class="ph ph-download-simple"></i> <span id="saveLabel">Save all…</span></button>
     </div>
   </section>
 </main>
@@ -200,17 +234,65 @@
       <button class="btn icon ghost" id="rPrev" title="Previous (←)"><i class="ph ph-caret-left"></i></button>
       <button class="btn icon ghost" id="rNext" title="Next (→)"><i class="ph ph-caret-right"></i></button>
       <span class="pos" id="rPos"></span>
+      <div class="swatches" id="rColours"></div>
       <span class="spacer"></span>
-      <button class="btn" id="rPdf"><i class="ph ph-file-pdf"></i> Save as PDF</button>
+      <button class="btn" id="rPdf"><i class="ph ph-download-simple"></i> Save…</button>
     </div>
     <div class="page" id="rPage"></div>
+  </div>
+</div>
+
+<div class="dialog" id="saveDlg" hidden>
+  <div class="scrim" data-close></div>
+  <div class="box">
+    <div class="side">
+      <div class="dhead"><h3 id="dTitle"></h3><button class="btn icon ghost" data-close title="Close (Esc)"><i class="ph ph-x"></i></button></div>
+      <div id="dStyleWrap">
+        <div class="label">Style</div>
+        <div class="styles" id="dStyles"></div>
+        <div class="tip"><kbd>←</kbd> <kbd>→</kbd> flip through styles</div>
+      </div>
+      <div class="formats" id="dFormats">
+        <div class="label">Save as</div>
+        <label data-multi><input type="radio" name="fmt" value="one"><i class="ph ph-file-pdf"></i><span><b>One PDF</b><small>Everyone in a single file, one per page</small></span></label>
+        <label data-multi><input type="radio" name="fmt" value="each"><i class="ph ph-files"></i><span><b>Separate PDFs</b><small>One file each, downloaded one after another</small></span></label>
+        <label data-multi><input type="radio" name="fmt" value="zip"><i class="ph ph-file-zip"></i><span><b>Separate PDFs in a ZIP</b><small>One file each, bundled into a single download</small></span></label>
+        <label data-single><input type="radio" name="fmt" value="pdf"><i class="ph ph-file-pdf"></i><span><b>PDF</b><small>Exactly what the preview shows</small></span></label>
+        <label><input type="radio" name="fmt" value="md"><i class="ph ph-file-text"></i><span><b>Text file (.md)</b><small>Plain text for any editor, or for mdpdf</small></span></label>
+        <div class="label sub" data-multi id="dSheetNote">Spreadsheet</div>
+        <label data-multi><input type="radio" name="fmt" value="xlsx"><i class="ph ph-microsoft-excel-logo"></i><span><b>Excel (.xlsx)</b><small>Marked rows keep their colour, so you can pass the file around</small></span></label>
+        <label data-multi><input type="radio" name="fmt" value="csv"><i class="ph ph-file-csv"></i><span><b>CSV</b><small>Colours are saved in a “Highlight” column</small></span></label>
+      </div>
+      <label class="check" id="dCoverWrap"><input type="checkbox" id="dCover" checked> Add a summary page with counts</label>
+      <div class="foot">
+        <span class="progress" id="dProgress"></span>
+        <button class="btn" data-close>Cancel</button>
+        <button class="btn primary" id="dSave"><i class="ph ph-download-simple"></i> Save</button>
+      </div>
+    </div>
+    <div class="preview"><iframe id="dPreview" title="Preview"></iframe><span class="busy" id="dBusy">Updating preview…</span></div>
   </div>
 </div>
 
 <script src="vendor/xlsx.full.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-const state = { name: "", columns: [], rows: [], hidden: new Set(), groupBy: "", titleCol: "", group: null, query: "", view: [], open: -1 };
+const state = { name: "", header: [], columns: [], rows: [], hidden: new Set(), groupBy: "", titleCol: "", group: null, query: "", colour: "", view: [], open: -1, dirty: false, stale: false };
+
+// Notion-style marks. Exported to Excel as row fills and to CSV/Excel as a "Highlight" column.
+const COLOURS = {
+  yellow: { label: "Yellow", light: "#fbf3db", dark: "#3b3420", dot: "#e9b200", xl: "FFF2CC" },
+  green:  { label: "Green",  light: "#e6f2e6", dark: "#203528", dot: "#3fa65a", xl: "D9EAD3" },
+  blue:   { label: "Blue",   light: "#e5f0f8", dark: "#1d2f40", dot: "#2f80ed", xl: "CFE2F3" },
+  purple: { label: "Purple", light: "#f2ecf8", dark: "#31283f", dot: "#9b59d0", xl: "D9D2E9" },
+  pink:   { label: "Pink",   light: "#fbecf3", dark: "#3d2533", dot: "#e255a1", xl: "F4CCE0" },
+  red:    { label: "Red",    light: "#fce8e8", dark: "#3f2323", dot: "#e5484d", xl: "F4CCCC" },
+  orange: { label: "Orange", light: "#fcecdc", dark: "#3d2c1d", dot: "#f2994a", xl: "FCE5CD" },
+  gray:   { label: "Gray",   light: "#efefed", dark: "#2c2c2e", dot: "#9b9a97", xl: "E7E6E6" },
+};
+const COLOR = Symbol("colour");
+const HIGHLIGHT = "Highlight";
+const tint = key => COLOURS[key] ? `--tint-l:${COLOURS[key].light};--tint-d:${COLOURS[key].dark}` : "";
 
 // ── Loading ──────────────────────────────────────────────────────────────────
 
@@ -224,8 +306,16 @@ function loadWorkbook(data, name) {
   if (grid.length < 2) throw new Error("That sheet looks empty.");
   const header = grid[0].map((h, i) => String(h).trim() || `Column ${i + 1}`);
   const rows = grid.slice(1).map(r => Object.fromEntries(header.map((h, i) => [h, String(r[i] ?? "").trim()])));
+  // a Highlight column (from an earlier Rowbook export) turns back into colour marks
+  const hlCol = header.find(h => /^(highlight|colou?r)$/i.test(h));
+  if (hlCol) rows.forEach(r => {
+    const k = String(r[hlCol]).toLowerCase().replace("grey", "gray");
+    if (COLOURS[k]) r[COLOR] = k;
+    delete r[hlCol];
+  });
+  state.header = header.filter(h => h !== hlCol);
   // drop columns nobody filled in
-  state.columns = header.filter(h => rows.some(r => r[h]));
+  state.columns = state.header.filter(h => rows.some(r => r[h]));
   state.rows = rows;
   state.name = name.replace(/\.[^.]+$/, "");
   state.hidden = new Set(state.columns.filter(c => /^(timestamp|email address|score)$/i.test(c)));
@@ -233,6 +323,8 @@ function loadWorkbook(data, name) {
   state.titleCol = state.columns.find(c => /full name|^name$|name/i.test(c)) || state.columns[0];
   state.group = null;
   state.query = "";
+  state.colour = "";
+  state.dirty = false;
   $("search").value = "";
   $("empty").hidden = true;
   $("viewer").hidden = false;
@@ -290,6 +382,7 @@ function filtered() {
   const q = state.query.toLowerCase();
   return state.rows.filter(r =>
     (state.group === null || (r[state.groupBy] || "(blank)") === state.group) &&
+    (!state.colour || (state.colour === "none" ? !r[COLOR] : r[COLOR] === state.colour)) &&
     (!q || Object.values(r).some(v => v.toLowerCase().includes(q))));
 }
 
@@ -305,18 +398,32 @@ function render() {
 
   state.view = filtered();
   const fields = visibleFields();
-  $("strip").innerHTML = state.view.length ? state.view.map((r, i) => `
-    <article class="card" data-i="${i}" tabindex="0">
-      <h2>${hl(r[state.titleCol] || "Untitled")}</h2>
-      <button class="btn icon ghost open" title="Open"><i class="ph ph-arrows-out-simple"></i></button>
-      <div class="meta">${state.groupBy && r[state.groupBy] ? `<span class="tag">${esc(r[state.groupBy])}</span>` : ""}<span>${i + 1} of ${state.view.length}</span></div>
-      <div class="body">${fields.filter(c => r[c]).map(c => `<p class="q">${esc(c)}</p><p class="a">${hl(r[c])}</p>`).join("")}</div>
-      <div class="hint"><i class="ph ph-book-open-text"></i> Read</div>
-    </article>`).join("") : `<p style="color:var(--muted);padding:20px">Nothing matches.</p>`;
+  $("strip").innerHTML = state.view.length ? state.view.map((r, i) => cardHtml(r, i, fields)).join("")
+    : `<p style="color:var(--muted);padding:20px">Nothing matches.</p>`;
+  colourOptions();
   $("strip").scrollLeft = 0;
   document.querySelectorAll(".card .body").forEach(b => b.classList.toggle("clipped", b.scrollHeight > b.clientHeight + 2));
-  $("groupPdfLabel").textContent = state.group !== null ? `Save “${state.group}” as PDF` : state.query ? "Save results as PDF" : "Save all as PDF";
+  $("saveLabel").textContent = state.group !== null ? `Save “${state.group}”…` : state.query ? "Save results…" : "Save all…";
   updateCount();
+}
+
+function cardHtml(r, i, fields = visibleFields()) {
+  const c = r[COLOR];
+  return `<article class="card${c ? " tinted" : ""}" style="${tint(c)}" data-i="${i}" tabindex="0">
+      <h2>${hl(r[state.titleCol] || "Untitled")}</h2>
+      <button class="btn icon ghost open" title="Open"><i class="ph ph-arrows-out-simple"></i></button>
+      <div class="meta">${c ? `<span class="cdot" style="background:${COLOURS[c].dot}" title="${COLOURS[c].label}"></span>` : ""}${state.groupBy && r[state.groupBy] ? `<span class="tag">${esc(r[state.groupBy])}</span>` : ""}<span>${i + 1} of ${state.view.length}</span></div>
+      <div class="body">${fields.filter(c => r[c]).map(c => `<p class="q">${esc(c)}</p><p class="a">${hl(r[c])}</p>`).join("")}</div>
+      <div class="hint"><i class="ph ph-book-open-text"></i> Read</div>
+    </article>`;
+}
+
+function colourOptions() {
+  const counts = {};
+  state.rows.forEach(r => { const k = r[COLOR] || ""; counts[k] = (counts[k] || 0) + 1; });
+  $("colourFilter").innerHTML = `<option value="">Any</option><option value="none">Not marked (${counts[""] || 0})</option>` +
+    Object.entries(COLOURS).map(([k, c]) => `<option value="${k}">${c.label} (${counts[k] || 0})</option>`).join("");
+  $("colourFilter").value = state.colour;
 }
 
 function visibleFields() { return state.columns.filter(c => !state.hidden.has(c) && c !== state.titleCol); }
@@ -350,7 +457,8 @@ function openReader(i, push = true) {
       <div class="meta">${state.groupBy && r[state.groupBy] ? `<span class="tag"><i class="ph ph-squares-four"></i>${esc(r[state.groupBy])}</span>` : ""}</div>
       ${visibleFields().filter(c => r[c]).map(c => `<p class="q">${esc(c)}</p><p class="a">${linkify(hl(r[c]))}</p>`).join("")}
     </article>
-    <p class="keys"><kbd>←</kbd> <kbd>→</kbd> previous / next · <kbd>F</kbd> full page · <kbd>Esc</kbd> close</p>`;
+    <p class="keys"><kbd>←</kbd> <kbd>→</kbd> previous / next · <kbd>1</kbd>–<kbd>8</kbd> colour, <kbd>0</kbd> clear · <kbd>F</kbd> full page · <kbd>Esc</kbd> close</p>`;
+  paintReader();
   $("rPage").scrollTop = 0;
   $("rPos").textContent = `${i + 1} of ${state.view.length}`;
   $("rPrev").disabled = i === 0;
@@ -360,11 +468,33 @@ function openReader(i, push = true) {
   if (first && push) history.pushState({ reader: true }, "");
 }
 
+function paintReader() {
+  const c = state.view[state.open]?.[COLOR] || "";
+  const sheet = document.querySelector(".reader .sheet");
+  sheet.classList.toggle("tinted", !!c);
+  sheet.setAttribute("style", tint(c));
+  $("rColours").innerHTML = `<button class="swatch none${c ? "" : " on"}" data-colour="" title="No colour (0)"><span></span></button>` +
+    Object.entries(COLOURS).map(([k, v], n) => `<button class="swatch${c === k ? " on" : ""}" data-colour="${k}" title="${v.label} (${n + 1})"><span style="background:${v.dot}"></span></button>`).join("");
+}
+
+function setColour(key) {
+  const r = state.view[state.open];
+  if (!r || (r[COLOR] || "") === key) return;
+  if (key) r[COLOR] = key; else delete r[COLOR];
+  state.dirty = true;
+  state.stale = true; // re-filter when the reader closes, not mid-read
+  const card = $("strip").children[state.open];
+  if (card) card.outerHTML = cardHtml(r, state.open);
+  paintReader();
+  colourOptions();
+}
+
 function closeReader(fromHistory) {
   if (state.open < 0) return;
-  const i = state.open;
+  let i = state.open;
   state.open = -1;
   $("reader").hidden = true;
+  if (state.stale) { state.stale = false; render(); i = Math.min(i, state.view.length - 1); }
   go(i);
   if (!fromHistory && history.state?.reader) history.back();
 }
@@ -376,7 +506,7 @@ function setReaderMode(full) {
   localStorage.setItem("rowbook-reader", full ? "full" : "side");
 }
 
-// ── Markdown + PDF (same look as mdpdf: the themes are mdpdf's own CSS) ──────
+// ── Text + PDF export ─────────────────────────────────────────────────────────
 
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 function hl(s) {
@@ -423,52 +553,345 @@ function toMarkdown(rows) {
   return out;
 }
 
-function toHtml(rows) {
+function title(rows) {
+  const scope = state.group !== null ? state.group : state.name;
+  return rows.length === 1 ? rows[0][state.titleCol] || "Untitled" : `${scope} — ${rows.length} responses`;
+}
+
+function toMarkdown(rows) {
+  const md = s => String(s).replace(/([\\`*_<>#])/g, "\\$1");
   const fields = visibleFields();
   let out = "";
   if (rows.length > 1) {
-    out += `<h1>${esc(title(rows))}</h1>`;
+    out += `# ${md(title(rows))}\n\n`;
     stats(rows).forEach(s => {
-      out += `<h3>${esc(s.col)}</h3><ul>` + s.counts.map(([k, n]) => `<li>${esc(k)}: <strong>${n}</strong></li>`).join("") + "</ul>";
+      out += `### ${md(s.col)}\n\n` + s.counts.map(([k, n]) => `- ${md(k)}: **${n}**`).join("\n") + "\n\n";
     });
   }
   rows.forEach(r => {
-    out += `<section class="rb-page"><h2>${esc(r[state.titleCol] || "Untitled")}</h2>`;
+    if (rows.length > 1) out += `<div style="page-break-before: always"></div>\n\n`;
+    out += `## ${md(r[state.titleCol] || "Untitled")}\n\n`;
     fields.filter(c => r[c]).forEach(c => {
-      out += `<p><strong>${esc(c)}</strong></p><p class="rb-a">${linkify(esc(r[c]))}</p>`;
+      out += `**${md(c)}**\n\n${md(r[c]).replace(/\n/g, "  \n")}\n\n`;
     });
-    out += "</section>";
   });
   return out;
 }
 
-function printPdf(rows) {
-  const frame = document.createElement("iframe");
-  frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
-  frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title(rows))}</title>
-    <base href="${esc(location.href)}">
-    <link rel="stylesheet" href="themes/${$("theme").value}.css">
-    <style>
-      @page { size: A4; margin: 12mm; }
-      body { max-width: none; padding: 0; }
-      .rb-a { white-space: pre-wrap; margin-top: -0.4em; }
-      ${rows.length > 1 ? ".rb-page { break-before: page; }" : ""}
-      .rb-page > h2:first-child { margin-top: 0; }
-      p strong { break-after: avoid; }
-    </style></head><body>${toHtml(rows)}</body></html>`;
-  frame.onload = () => {
-    // give fonts a beat to settle, then open the print dialog (choose "Save as PDF")
-    setTimeout(() => { frame.contentWindow.focus(); frame.contentWindow.print(); setTimeout(() => frame.remove(), 1000); }, 300);
-  };
-  document.body.appendChild(frame);
+// The five mdpdf themes, carried over as PDF styles (sizes in pt, colours from each theme's CSS)
+const STYLES = {
+  apple:      { label: "Apple",   ink: "#1d1d1f", muted: "#6e6e73", link: "#0071e3", size: 11.25, h1: 24, h2: 17.5, h3: 13.5 },
+  notion:     { label: "Notion",  ink: "#37352f", muted: "#787774", link: "#0b6e99", size: 11.25, h1: 22.5, h2: 16.3, h3: 13.3, rule: "#e9e9e7" },
+  github:     { label: "GitHub",  ink: "#1f2328", muted: "#59636e", link: "#0969da", size: 12, h1: 24, h2: 18, h3: 15, rule: "#d1d9e0", h1Rule: "#d1d9e0" },
+  minimal:    { label: "Minimal", ink: "#111111", muted: "#555555", link: "#111111", size: 11.6, h1: 21.4, h2: 15.75, h3: 13, rule: "#dddddd", h1Rule: "#111111", h1RuleWidth: 1.5 },
+  "amoako-1": { label: "Amoako",  ink: "#1d1d1f", muted: "#6e6e73", link: "#0071e3", size: 11.25, h1: 26, h2: 16.3, h3: 13.3, rule: "#e9e9e7", caps: true },
+};
+
+let engine;
+function loadScript(src) {
+  return new Promise((ok, fail) => {
+    const t = document.createElement("script");
+    t.src = src; t.onload = ok; t.onerror = () => fail(new Error("couldn't load " + src));
+    document.head.appendChild(t);
+  });
+}
+function pdfEngine() {
+  // pdfmake + Inter only load the first time someone saves, so opening a file stays fast
+  engine = engine || Promise.all([loadScript("vendor/pdfmake.min.js"), loadScript("vendor/inter-vfs.js")])
+    .catch(e => { engine = null; throw e; });
+  return engine;
+}
+const FONTS = {
+  Inter: { normal: "Inter-Regular.ttf", bold: "Inter-SemiBold.ttf", italics: "Inter-Italic.ttf", bolditalics: "Inter-SemiBoldItalic.ttf" },
+  InterDisplay: { normal: "Inter-ExtraBold.ttf", bold: "Inter-ExtraBold.ttf", italics: "Inter-ExtraBold.ttf", bolditalics: "Inter-ExtraBold.ttf" },
+};
+async function makePdf(def) {
+  await pdfEngine();
+  return new Promise(ok => pdfMake.createPdf(def, null, FONTS, window.ROWBOOK_FONTS).getBlob(ok));
 }
 
-function download(name, text) {
+function runs(text, s) {
+  return String(text).split(/(https?:\/\/\S+)/).filter(Boolean)
+    .map(t => /^https?:\/\//.test(t) ? { text: t, link: t, color: s.link, decoration: "underline" } : { text: t });
+}
+
+// rows: pages to include · all: the rows the summary page counts · cover: add the summary page
+function pdfDoc(rows, key, { cover = false, all = rows } = {}) {
+  const s = STYLES[key], W = 515;
+  const rule = (color, width = 0.75) => ({ canvas: [{ type: "line", x1: 0, y1: 0, x2: W, y2: 0, lineWidth: width, lineColor: color }], margin: [0, 0, 0, 12] });
+  const heading = (text, size, ruleColor, extra = {}) => [
+    { text, fontSize: size, font: size >= 20 ? "InterDisplay" : "Inter", bold: true, color: s.ink, characterSpacing: size >= 20 ? -0.3 : 0,
+      margin: [0, 0, 0, ruleColor ? 6 : 10], ...extra },
+    ruleColor && rule(ruleColor, ruleColor === s.h1Rule ? s.h1RuleWidth || 0.75 : 0.75),
+  ].filter(Boolean);
+  const content = [];
+  const fields = visibleFields();
+  const docTitle = cover || rows.length > 1 ? title(all) : title(rows);
+
+  if (cover) {
+    content.push(...heading(s.caps ? docTitle.toUpperCase() : docTitle, s.h1, s.h1Rule, s.caps ? { characterSpacing: 0.4 } : {}));
+    content.push({ text: new Date().toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }), color: s.muted, margin: [0, -4, 0, 16] });
+    stats(all).forEach(st => {
+      content.push({ text: st.col, fontSize: s.h3, bold: true, margin: [0, 10, 0, 6] });
+      content.push({
+        table: { widths: ["*", "auto"], body: st.counts.map(([k, n]) => [k, { text: String(n), bold: true, alignment: "right" }]) },
+        layout: { hLineWidth: i => (i ? 0.5 : 0), vLineWidth: () => 0, hLineColor: () => s.rule || "#e5e5ea",
+                  paddingLeft: () => 0, paddingRight: () => 0, paddingTop: () => 4, paddingBottom: () => 4 },
+        margin: [0, 0, 0, 6],
+      });
+    });
+  }
+  rows.forEach((r, i) => {
+    const solo = rows.length === 1 && !cover;
+    content.push(...heading(r[state.titleCol] || "Untitled", solo ? s.h1 : s.h2, solo ? s.h1Rule : s.rule,
+      cover || i > 0 ? { pageBreak: "before" } : {}));
+    if (state.groupBy && r[state.groupBy]) content.push({ text: r[state.groupBy], color: s.muted, fontSize: s.size - 1, margin: [0, -4, 0, 10] });
+    fields.filter(c => r[c]).forEach(c => {
+      content.push({ text: c, bold: true, margin: [0, 9, 0, 2], headlineLevel: 1 });
+      content.push({ text: runs(r[c], s), margin: [0, 0, 0, 2] });
+    });
+  });
+  return {
+    pageSize: "A4", pageMargins: [40, 48, 40, 52], content,
+    defaultStyle: { font: "Inter", fontSize: s.size, lineHeight: 1.3, color: s.ink },
+    info: { title: docTitle, creator: "Rowbook" },
+    footer: (page, pages) => ({ columns: [{ text: docTitle }, { text: `${page} / ${pages}`, alignment: "right" }],
+      fontSize: 8, color: s.muted, margin: [40, 18, 40, 0] }),
+    // keep a question on the same page as its answer
+    pageBreakBefore: (node, after) => node.headlineLevel === 1 && after.length === 0,
+  };
+}
+
+// Minimal ZIP writer (stored, no compression; PDFs are already compressed)
+const CRC = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+function crc32(b) { let c = ~0; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return ~c >>> 0; }
+function zip(files) {
+  const enc = new TextEncoder(), now = new Date(), parts = [], central = [];
+  const time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+  const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  let offset = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+    const local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true); local.setUint16(6, 0x0800, true);
+    local.setUint16(10, time, true); local.setUint16(12, date, true);
+    local.setUint32(14, crc, true); local.setUint32(18, size, true); local.setUint32(22, size, true); local.setUint16(26, name.length, true);
+    parts.push(local, name, f.data);
+    const cen = new DataView(new ArrayBuffer(46));
+    cen.setUint32(0, 0x02014b50, true); cen.setUint16(4, 20, true); cen.setUint16(6, 20, true); cen.setUint16(8, 0x0800, true);
+    cen.setUint16(12, time, true); cen.setUint16(14, date, true);
+    cen.setUint32(16, crc, true); cen.setUint32(20, size, true); cen.setUint32(24, size, true); cen.setUint16(28, name.length, true);
+    cen.setUint32(42, offset, true);
+    central.push(cen, name);
+    offset += 30 + name.length + size;
+  }
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, central.reduce((n, p) => n + p.byteLength, 0), true); end.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, end], { type: "application/zip" });
+}
+
+const safe = name => String(name).replace(/[\\/:*?"<>|]/g, "").trim() || "Untitled";
+function fileNames(rows) {
+  const seen = {};
+  return rows.map(r => {
+    const base = safe(r[state.titleCol]);
+    seen[base] = (seen[base] || 0) + 1;
+    return seen[base] > 1 ? `${base} (${seen[base]})` : base;
+  });
+}
+function downloadBlob(blob, name) {
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([text], { type: "text/markdown" }));
+  a.href = URL.createObjectURL(blob);
   a.download = name;
   a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ── Spreadsheet export (all rows, original column order, colours kept) ───────
+
+function sheetData() {
+  return [[...state.header, HIGHLIGHT],
+    ...state.rows.map(r => [...state.header.map(h => r[h] ?? ""), r[COLOR] ? COLOURS[r[COLOR]].label : ""])];
+}
+
+function toCsv() {
+  const cell = v => /[",\r\n]/.test(v) ? `"${String(v).replace(/"/g, '""')}"` : v;
+  return "﻿" + sheetData().map(row => row.map(cell).join(",")).join("\r\n"); // BOM so Excel reads UTF-8
+}
+
+function toXlsx() {
+  const data = sheetData(), keys = Object.keys(COLOURS), enc = new TextEncoder();
+  const x = v => String(v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "")
+    .replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const col = i => { let out = ""; for (i++; i; i = (i - 1) / 26 | 0) out = String.fromCharCode(65 + (i - 1) % 26) + out; return out; };
+  const NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"';
+  const REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+  const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+
+  const widths = data[0].map((_, i) => Math.min(60, Math.max(8, ...data.slice(0, 300).map(r => String(r[i]).length)) + 2));
+  const sheetRows = data.map((row, ri) => {
+    const c = ri ? state.rows[ri - 1][COLOR] : null;
+    const st = ri === 0 ? ' s="1"' : c ? ` s="${2 + keys.indexOf(c)}"` : "";
+    return `<row r="${ri + 1}">` + row.map((v, ci) => {
+      const ref = col(ci) + (ri + 1);
+      // plain numbers go back as numbers (no leading zeros, so phone numbers and IDs like 007 stay text)
+      if (ri && /^-?(0|[1-9]\d{0,14})(\.\d+)?$/.test(v)) return `<c r="${ref}"${st}><v>${v}</v></c>`;
+      return `<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${x(v)}</t></is></c>`;
+    }).join("") + "</row>";
+  }).join("");
+
+  const files = {
+    "[Content_Types].xml": `${head}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
+    "_rels/.rels": `${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${REL}/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+    "xl/workbook.xml": `${head}<workbook ${NS} xmlns:r="${REL}"><sheets><sheet name="Responses" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+    "xl/_rels/workbook.xml.rels": `${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${REL}/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${REL}/styles" Target="styles.xml"/></Relationships>`,
+    "xl/styles.xml": `${head}<styleSheet ${NS}><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>` +
+      `<fills count="${2 + keys.length}"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>` +
+      keys.map(k => `<fill><patternFill patternType="solid"><fgColor rgb="FF${COLOURS[k].xl}"/><bgColor indexed="64"/></patternFill></fill>`).join("") + `</fills>` +
+      `<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>` +
+      `<cellXfs count="${2 + keys.length}"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>` +
+      keys.map((_, i) => `<xf numFmtId="0" fontId="0" fillId="${2 + i}" borderId="0" xfId="0" applyFill="1"/>`).join("") +
+      `</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`,
+    "xl/worksheets/sheet1.xml": `${head}<worksheet ${NS}><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>` +
+      `<sheetFormatPr defaultRowHeight="15"/><cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols>` +
+      `<sheetData>${sheetRows}</sheetData></worksheet>`,
+  };
+  const blob = zip(Object.entries(files).map(([name, text]) => ({ name, data: enc.encode(text) })));
+  return new Blob([blob], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
+function sheetPreview(withFills) {
+  const data = sheetData(), shown = data.slice(0, 41);
+  const rows = shown.map((row, i) => {
+    const c = i && withFills ? COLOURS[state.rows[i - 1][COLOR]] : null;
+    const tag = i ? "td" : "th";
+    return `<tr${c ? ` style="background:#${c.xl}"` : ""}>${row.map(v => `<${tag}>${esc(String(v).slice(0, 80))}</${tag}>`).join("")}</tr>`;
+  }).join("");
+  return `<style>body{margin:0;font:12px -apple-system,"Segoe UI",sans-serif;background:#fff;color:#1d1d1f}table{border-collapse:collapse}
+    th,td{border:1px solid #dcdce2;padding:4px 8px;white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis;text-align:left}
+    th{background:#f2f2f5;position:sticky;top:0}p{padding:4px 10px;color:#6e6e73}</style>
+    <table>${rows}</table>${data.length > shown.length ? `<p>…and ${data.length - shown.length} more rows</p>` : ""}`;
+}
+
+
+// ── Save dialog ──────────────────────────────────────────────────────────────
+
+const dlg = { rows: [], style: localStorage.getItem("rowbook-theme") || "apple", fmt: "one", url: null, token: 0, timer: 0 };
+if (!STYLES[dlg.style]) dlg.style = "apple";
+
+function openSave(rows) {
+  dlg.rows = rows;
+  const single = rows.length === 1;
+  $("dTitle").textContent = single ? `Save ${rows[0][state.titleCol] || "this page"}` : `Save ${rows.length} responses`;
+  document.querySelectorAll("[data-multi]").forEach(l => l.hidden = single);
+  document.querySelectorAll("[data-single]").forEach(l => l.hidden = !single);
+  const saved = localStorage.getItem("rowbook-format");
+  const valid = single ? ["pdf", "md"] : ["one", "each", "zip", "md", "xlsx", "csv"];
+  $("dSheetNote").textContent = `Spreadsheet · the whole file, all ${state.rows.length} rows`;
+  $("dProgress").textContent = "";
+  $("saveDlg").hidden = false;
+  renderStyles();
+  setFormat(valid.includes(saved) ? saved : valid[0]);
+}
+
+function closeSave() {
+  $("saveDlg").hidden = true;
+  dlg.token++;
+  if (dlg.url) URL.revokeObjectURL(dlg.url);
+  dlg.url = null;
+  $("dPreview").removeAttribute("src");
+}
+
+function renderStyles() {
+  $("dStyles").innerHTML = Object.entries(STYLES).map(([k, s]) => `
+    <button class="style${k === dlg.style ? " on" : ""}" data-style="${k}">
+      <span class="aa" style="color:${s.ink}${s.caps ? ";text-transform:uppercase;letter-spacing:.02em" : ""}">Aa
+        <u style="border-top:${(s.h1Rule ? s.h1RuleWidth || 1 : 0)}px solid ${s.h1Rule || "transparent"}"></u></span>${s.label}
+    </button>`).join("");
+}
+
+function setStyle(key) { dlg.style = key; renderStyles(); preview(); }
+
+function setFormat(fmt) {
+  dlg.fmt = fmt;
+  $("dFormats").querySelector(`input[value="${fmt}"]`).checked = true;
+  $("dCoverWrap").hidden = dlg.rows.length === 1 || !["one", "zip"].includes(fmt);
+  $("dStyleWrap").hidden = ["md", "xlsx", "csv"].includes(fmt);
+  $("dSave").innerHTML = `<i class="ph ph-download-simple"></i> ${{ one: "Save PDF", pdf: "Save PDF", each: `Save ${dlg.rows.length} PDFs`, zip: "Save ZIP", md: "Save text file", xlsx: "Save Excel file", csv: "Save CSV" }[fmt]}`;
+  preview();
+}
+
+function preview() {
+  clearTimeout(dlg.timer);
+  dlg.timer = setTimeout(renderPreview, 120);
+}
+
+async function renderPreview() {
+  const t = ++dlg.token, frame = $("dPreview");
+  $("dBusy").hidden = false;
+  try {
+    if (dlg.fmt === "xlsx" || dlg.fmt === "csv") {
+      frame.removeAttribute("src");
+      frame.srcdoc = sheetPreview(dlg.fmt === "xlsx");
+    } else if (dlg.fmt === "md") {
+      const text = toMarkdown(dlg.rows);
+      frame.removeAttribute("src");
+      frame.srcdoc = `<pre style="white-space:pre-wrap;font:12.5px/1.55 ui-monospace,Menlo,monospace;padding:28px;margin:0;color:#1d1d1f;background:#fff;min-height:100vh">${esc(text.slice(0, 6000))}${text.length > 6000 ? "\n\n…" : ""}</pre>`;
+    } else {
+      // preview the first couple of pages only, so it stays quick with hundreds of rows
+      const many = dlg.fmt === "one";
+      const cover = dlg.rows.length > 1 && $("dCover").checked && ["one", "zip"].includes(dlg.fmt);
+      const blob = await makePdf(pdfDoc(dlg.rows.slice(0, many ? 2 : 1), dlg.style, { cover: cover && many, all: many ? dlg.rows : dlg.rows.slice(0, 1) }));
+      if (t !== dlg.token) return;
+      if (dlg.url) URL.revokeObjectURL(dlg.url);
+      dlg.url = URL.createObjectURL(blob);
+      frame.removeAttribute("srcdoc");
+      frame.src = dlg.url + "#toolbar=0&navpanes=0&view=FitH";
+    }
+  } catch (e) {
+    $("dProgress").textContent = "Preview failed: " + e.message;
+  }
+  if (t === dlg.token) $("dBusy").hidden = true;
+}
+
+async function save() {
+  const rows = dlg.rows, key = dlg.style, fmt = dlg.fmt, btn = $("dSave");
+  const progress = text => $("dProgress").textContent = text;
+  const cover = rows.length > 1 && $("dCover").checked;
+  btn.disabled = true;
+  try {
+    if (fmt === "xlsx" || fmt === "csv") {
+      downloadBlob(fmt === "xlsx" ? toXlsx() : new Blob([toCsv()], { type: "text/csv" }), `${safe(state.name)}.${fmt}`);
+      state.dirty = false;
+    } else if (fmt === "md") {
+      downloadBlob(new Blob([toMarkdown(rows)], { type: "text/markdown" }), `${safe(title(rows))}.md`);
+    } else if (fmt === "one" || fmt === "pdf") {
+      progress(`Building ${rows.length > 1 ? rows.length + " pages" : "PDF"}…`);
+      downloadBlob(await makePdf(pdfDoc(rows, key, { cover })), `${safe(title(rows))}.pdf`);
+    } else {
+      const names = fileNames(rows), files = [];
+      if (fmt === "zip" && cover) files.push({ name: "00 Summary.pdf", blob: await makePdf(pdfDoc([], key, { cover: true, all: rows })) });
+      for (let i = 0; i < rows.length; i++) {
+        progress(`Building ${i + 1} of ${rows.length}…`);
+        const blob = await makePdf(pdfDoc([rows[i]], key));
+        if (fmt === "each") { downloadBlob(blob, names[i] + ".pdf"); await sleep(250); }
+        else files.push({ name: names[i] + ".pdf", blob });
+      }
+      if (fmt === "zip") {
+        progress("Zipping…");
+        const data = await Promise.all(files.map(async f => ({ name: f.name, data: new Uint8Array(await f.blob.arrayBuffer()) })));
+        downloadBlob(zip(data), `${safe(title(rows))}.zip`);
+      }
+    }
+    progress(fmt === "each" ? "Done. If only one file arrived, allow multiple downloads for this site." : "Saved to your Downloads.");
+    localStorage.setItem("rowbook-format", fmt);
+    localStorage.setItem("rowbook-theme", key);
+  } catch (e) {
+    progress("Couldn't save: " + e.message);
+  }
+  btn.disabled = false;
 }
 
 // ── Events ───────────────────────────────────────────────────────────────────
@@ -492,12 +915,13 @@ $("modeBtn").onclick = () => {
   setMode(mode);
   localStorage.setItem("rowbook-mode", mode);
 };
-$("theme").value = localStorage.getItem("rowbook-theme") || "apple";
-$("theme").onchange = () => localStorage.setItem("rowbook-theme", $("theme").value);
 setReaderMode(localStorage.getItem("rowbook-reader") === "full");
 
 $("groupBy").onchange = e => { state.groupBy = e.target.value; state.group = null; render(); };
 $("titleCol").onchange = e => { state.titleCol = e.target.value; render(); };
+$("colourFilter").onchange = e => { state.colour = e.target.value; render(); };
+$("rColours").onclick = e => { const b = e.target.closest("[data-colour]"); if (b) setColour(b.dataset.colour); };
+window.addEventListener("beforeunload", e => { if (state.dirty) { e.preventDefault(); e.returnValue = ""; } });
 $("search").oninput = e => { state.query = e.target.value.trim(); render(); };
 $("chips").onclick = e => {
   const chip = e.target.closest(".chip");
@@ -515,23 +939,36 @@ $("strip").onscroll = () => requestAnimationFrame(updateCount);
 $("strip").onclick = e => { const c = e.target.closest(".card"); if (c && !e.target.closest("a")) openReader(+c.dataset.i); };
 $("prev").onclick = () => go(Math.max(0, current() - 1));
 $("next").onclick = () => go(Math.min(state.view.length - 1, current() + 1));
-$("groupPdf").onclick = () => state.view.length && printPdf(state.view);
-$("mdBtn").onclick = () => state.view.length && download(`${title(state.view).replace(/[\\/:*?"<>|]/g, "")}.md`, toMarkdown(state.view));
+$("saveBtn").onclick = () => state.view.length && openSave(state.view);
 
 $("scrim").onclick = $("rClose").onclick = () => closeReader();
 $("rMode").onclick = () => setReaderMode(!$("reader").classList.contains("full"));
 $("rPrev").onclick = () => openReader(state.open - 1);
 $("rNext").onclick = () => openReader(state.open + 1);
-$("rPdf").onclick = () => printPdf([state.view[state.open]]);
+$("rPdf").onclick = () => openSave([state.view[state.open]]);
+document.querySelectorAll("[data-close]").forEach(b => b.onclick = closeSave);
+$("dStyles").onclick = e => { const b = e.target.closest("[data-style]"); if (b) setStyle(b.dataset.style); };
+$("dFormats").onchange = e => setFormat(e.target.value);
+$("dCover").onchange = preview;
+$("dSave").onclick = save;
 window.addEventListener("popstate", () => closeReader(true));
 
 document.addEventListener("keydown", e => {
+  if (!$("saveDlg").hidden) {
+    if (e.key === "Escape") closeSave();
+    else if (/^Arrow(Left|Right)$/.test(e.key) && e.target.tagName !== "INPUT") {
+      const keys = Object.keys(STYLES), i = keys.indexOf(dlg.style);
+      setStyle(keys[(i + (e.key === "ArrowRight" ? 1 : keys.length - 1)) % keys.length]);
+    }
+    return;
+  }
   if ($("viewer").hidden || /INPUT|SELECT/.test(e.target.tagName) || e.metaKey || e.ctrlKey) return;
   const reading = state.open >= 0;
   if (e.key === "ArrowRight") { e.preventDefault(); reading ? $("rNext").click() : $("next").click(); }
   else if (e.key === "ArrowLeft") { e.preventDefault(); reading ? $("rPrev").click() : $("prev").click(); }
   else if (e.key === "Escape" && reading) closeReader();
   else if ((e.key === "f" || e.key === "F") && reading) $("rMode").click();
+  else if (reading && /^[0-8]$/.test(e.key)) setColour(e.key === "0" ? "" : Object.keys(COLOURS)[+e.key - 1]);
   else if (e.key === "Enter" && !reading && e.target.classList.contains("card")) openReader(+e.target.dataset.i);
   else if (e.key === "/" && !reading) { e.preventDefault(); $("search").focus(); }
 });
