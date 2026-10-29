@@ -3,17 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📖</text></svg>">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Rowbook — read spreadsheets like a book</title>
 <script>document.documentElement.dataset.mode = localStorage.getItem("rowbook-mode") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")</script>
+<link rel="stylesheet" href="vendor/phosphor/style.css">
 <style>
   :root {
-    --bg: #f5f5f7; --panel: #ffffff; --ink: #1d1d1f; --muted: #6e6e73; --line: #e3e3e8;
-    --accent: #0a66d8; --chip: #ececf0; --shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.06);
+    --bg: #f5f5f7; --panel: #ffffff; --ink: #1d1d1f; --soft: #3a3a3f; --muted: #6e6e73; --line: #e3e3e8;
+    --accent: #2f5bea; --accent-ink: #fff; --chip: #ebebf0; --hover: #f0f0f4;
+    --shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.06);
+    --scrim: rgba(20,20,30,.28);
   }
   [data-mode="dark"] {
-    --bg: #111113; --panel: #1c1c1f; --ink: #f2f2f4; --muted: #9a9aa2; --line: #2e2e33;
-    --accent: #4c9bff; --chip: #2a2a2f; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    --bg: #111113; --panel: #1c1c1f; --ink: #f2f2f4; --soft: #d6d6dc; --muted: #9a9aa2; --line: #2e2e33;
+    --accent: #5b8cff; --chip: #2a2a2f; --hover: #26262b;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    --scrim: rgba(0,0,0,.55);
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
@@ -22,75 +28,117 @@
     background: var(--bg); color: var(--ink); display: flex; flex-direction: column;
     -webkit-font-smoothing: antialiased;
   }
+  .ph { font-size: 17px; vertical-align: -3px; }
   button, select, input { font: inherit; color: inherit; }
-  button, select {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; cursor: pointer;
+  .btn, select {
+    display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 9px; cursor: pointer; white-space: nowrap;
   }
-  button:hover, select:hover { border-color: var(--muted); }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  input[type=search], input[type=url] {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; min-width: 0;
+  .btn:hover, select:hover { background: var(--hover); }
+  .btn.icon { width: 34px; padding: 0; justify-content: center; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.ghost { border-color: transparent; background: transparent; }
+  .btn.ghost:hover { background: var(--hover); }
+  .field { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+  .field select { max-width: 260px; color: var(--ink); font-size: 14px; }
+  .search { position: relative; flex: 1 1 240px; }
+  .search .ph { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .search input {
+    width: 100%; height: 34px; padding: 0 12px 0 34px; background: var(--panel); border: 1px solid var(--line); border-radius: 9px;
   }
-  label { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  input:focus, select:focus, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   header { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
-  .brand { font-weight: 800; font-size: 18px; letter-spacing: -.02em; margin-right: auto; }
-  .brand span { color: var(--muted); font-weight: 500; font-size: 13px; letter-spacing: 0; margin-left: 8px; }
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 18px; letter-spacing: -.02em; margin-right: auto; }
+  .brand img { width: 30px; height: 30px; }
+  .brand .file { font-weight: 500; font-size: 13px; letter-spacing: 0; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
 
-  .toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 18px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
-  .toolbar input[type=search] { flex: 1 1 220px; }
-  .spacer { flex: 1; }
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 18px 4px; flex-wrap: wrap; }
   details.fields { position: relative; }
-  details.fields summary { list-style: none; cursor: pointer; border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; background: var(--panel); }
+  details.fields summary { list-style: none; }
+  details.fields summary::-webkit-details-marker { display: none; }
   details.fields .menu {
-    position: absolute; z-index: 5; top: 110%; left: 0; width: 320px; max-height: 60vh; overflow: auto;
-    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; box-shadow: var(--shadow);
+    position: absolute; z-index: 5; top: 115%; right: 0; width: 340px; max-height: 60vh; overflow: auto;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px; box-shadow: var(--shadow);
   }
-  details.fields .menu label { color: var(--ink); padding: 4px 6px; font-size: 13px; }
+  details.fields .menu p { margin: 4px 6px 8px; color: var(--muted); font-size: 12px; }
+  details.fields .menu label { display: flex; gap: 8px; align-items: flex-start; padding: 5px 6px; font-size: 13px; border-radius: 6px; cursor: pointer; }
+  details.fields .menu label:hover { background: var(--hover); }
 
   .chips { display: flex; gap: 6px; padding: 10px 18px 0; overflow-x: auto; scrollbar-width: none; }
-  .chip { white-space: nowrap; border: none; background: var(--chip); border-radius: 999px; padding: 5px 12px; font-size: 13px; }
-  .chip b { font-weight: 600; margin-left: 4px; color: var(--muted); }
+  .chip { white-space: nowrap; border: none; background: var(--chip); border-radius: 999px; padding: 6px 13px; font-size: 13px; cursor: pointer; }
+  .chip b { font-weight: 600; margin-left: 5px; color: var(--muted); }
   .chip.on { background: var(--ink); color: var(--bg); }
   .chip.on b { color: inherit; opacity: .7; }
 
   main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .strip {
-    flex: 1; min-height: 0; display: flex; gap: 18px; padding: 16px 18px 20px; overflow-x: auto;
+    flex: 1; min-height: 0; display: flex; align-items: flex-start; gap: 16px; padding: 14px 18px 18px; overflow-x: auto;
     scroll-snap-type: x mandatory; scroll-padding: 0 18px;
   }
   .card {
-    flex: 0 0 min(680px, calc(100vw - 36px)); scroll-snap-align: start; background: var(--panel); border-radius: 14px;
-    box-shadow: var(--shadow); overflow-y: auto; padding: 34px 38px 40px;
+    position: relative; flex: 0 0 min(420px, calc(100vw - 36px)); max-height: 100%; scroll-snap-align: start;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+    overflow: hidden; padding: 24px 26px 22px; cursor: pointer; transition: transform .12s, border-color .12s;
+    display: flex; flex-direction: column;
   }
-  .card h2 { font-size: 26px; line-height: 1.15; letter-spacing: -.025em; margin: 0 0 4px; }
-  .card .meta { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
-  .card .q { font-weight: 650; margin: 18px 0 3px; }
-  .card .a { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .card .a a { color: var(--accent); }
-  .card .actions { display: flex; gap: 8px; margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card h2 { font-size: 21px; line-height: 1.2; letter-spacing: -.02em; margin: 0 40px 6px 0; }
+  .card .open { position: absolute; top: 18px; right: 18px; }
+  .card .body { overflow: hidden; flex: 1; }
+  .card .body.clipped { -webkit-mask-image: linear-gradient(#000 85%, transparent); mask-image: linear-gradient(#000 85%, transparent); }
+  .card .q { font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 14px 0 2px; }
+  .card .a { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .card .hint { color: var(--accent); font-size: 13px; font-weight: 600; margin-top: 12px; display: flex; gap: 6px; align-items: center; }
+  .tag { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--soft); background: var(--chip); border-radius: 999px; padding: 3px 10px; }
+  .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: 12.5px; }
   mark { background: #ffe58a; color: #1d1d1f; border-radius: 3px; }
+  a { color: var(--accent); }
 
-  .status { display: flex; align-items: center; gap: 10px; padding: 0 18px 12px; color: var(--muted); font-size: 13px; }
+  .status { display: flex; align-items: center; gap: 8px; padding: 10px 18px; border-top: 1px solid var(--line); background: var(--panel); color: var(--muted); font-size: 13px; }
+  .spacer { flex: 1; }
 
   .empty { flex: 1; display: grid; place-items: center; padding: 30px; }
   .drop {
-    width: min(620px, 100%); border: 2px dashed var(--line); border-radius: 18px; padding: 44px 34px; text-align: center; background: var(--panel);
+    width: min(620px, 100%); border: 2px dashed var(--line); border-radius: 22px; padding: 42px 34px 30px; text-align: center; background: var(--panel);
   }
   .drop.over { border-color: var(--accent); }
-  .drop h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.03em; }
-  .drop p { color: var(--muted); margin: 6px 0; }
-  .drop .row { display: flex; gap: 8px; margin-top: 18px; }
-  .drop .row input { flex: 1; }
-  .privacy { font-size: 13px; margin-top: 20px !important; }
+  .drop img { width: 96px; height: 96px; }
+  .drop h1 { margin: 8px 0 8px; font-size: 28px; letter-spacing: -.03em; }
+  .drop p { color: var(--muted); margin: 6px auto; max-width: 460px; }
+  .drop .row { display: flex; gap: 8px; margin-top: 20px; }
+  .drop .row .search { flex: 1; }
+  .privacy { font-size: 13px; margin-top: 18px !important; display: flex; gap: 6px; align-items: center; justify-content: center; }
   .error { color: #d93025; font-size: 13px; min-height: 1.2em; }
+
+  /* ── Reader: Notion-style side peek, or full page ── */
+  .reader { position: fixed; inset: 0; z-index: 20; display: flex; justify-content: flex-end; }
+  .reader .scrim { position: absolute; inset: 0; background: var(--scrim); animation: fade .15s; }
+  .reader .sheet {
+    position: relative; width: min(720px, 100vw); height: 100%; background: var(--panel); box-shadow: -12px 0 40px rgba(0,0,0,.18);
+    display: flex; flex-direction: column; animation: slide .18s ease-out;
+  }
+  .reader.full .sheet { width: 100vw; animation: fade .15s; }
+  .reader .bar { display: flex; align-items: center; gap: 4px; padding: 10px 14px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+  .reader .pos { margin: 0 8px; }
+  .reader .page { flex: 1; overflow-y: auto; }
+  .reader article { max-width: 680px; margin: 0 auto; padding: 40px 44px 80px; }
+  .reader h1 { font-size: 34px; line-height: 1.12; letter-spacing: -.03em; margin: 0 0 12px; }
+  .reader .meta { margin-bottom: 30px; }
+  .reader .q { font-size: 13.5px; font-weight: 600; color: var(--muted); margin: 26px 0 4px; }
+  .reader .a { font-size: 17px; line-height: 1.7; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .reader .keys { color: var(--muted); font-size: 12px; text-align: center; padding: 0 0 18px; }
+  kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  @keyframes slide { from { transform: translateX(40px); opacity: 0; } }
+  @keyframes fade { from { opacity: 0; } }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <header>
-  <div class="brand">Rowbook<span>read spreadsheets like a book</span></div>
-  <label>PDF theme
+  <div class="brand"><img src="icon.svg" alt="">Rowbook <span class="file" id="fileName" hidden></span></div>
+  <label class="field" title="How downloaded PDFs look">PDF style
     <select id="theme">
       <option value="apple">Apple</option>
       <option value="notion">Notion</option>
@@ -99,51 +147,70 @@
       <option value="amoako-1">Amoako</option>
     </select>
   </label>
-  <button id="openBtn">Open file…</button>
-  <button id="modeBtn" title="Toggle dark mode">◐</button>
+  <button class="btn" id="openBtn"><i class="ph ph-folder-open"></i> Open file</button>
+  <button class="btn icon" id="modeBtn" title="Light / dark"><i class="ph ph-moon"></i></button>
   <input type="file" id="file" accept=".csv,.tsv,.xlsx,.xls,.xlsm,.ods" hidden>
 </header>
 
 <main>
   <section class="empty" id="empty">
     <div class="drop" id="drop">
-      <h1>Drop a spreadsheet here</h1>
-      <p>CSV or Excel. Every row becomes a page you can scroll through sideways, grouped by whatever column matters.</p>
-      <p><button class="primary" id="openBtn2">Choose a file</button></p>
+      <img src="icon.svg" alt="">
+      <h1>Read a spreadsheet like a book</h1>
+      <p>Drop a CSV or Excel file here. Each row becomes its own page, sorted into groups by whichever column you choose.</p>
+      <p style="margin-top:18px"><button class="btn primary" id="openBtn2"><i class="ph ph-folder-open"></i> Choose a file</button></p>
       <div class="row">
-        <input type="url" id="sheetUrl" placeholder="…or paste a Google Sheets link (shared as “anyone with the link”)">
-        <button id="sheetBtn">Load</button>
+        <div class="search"><i class="ph ph-link"></i><input type="url" id="sheetUrl" placeholder="…or paste a Google Sheets link"></div>
+        <button class="btn" id="sheetBtn">Load</button>
       </div>
       <p class="error" id="error"></p>
-      <p class="privacy">🔒 Your file is read by this browser tab only. Nothing is uploaded or saved anywhere, and closing the tab clears it.</p>
+      <p class="privacy"><i class="ph ph-lock-simple"></i> Your file stays in this browser tab. Nothing is uploaded or saved.</p>
     </div>
   </section>
 
   <section id="viewer" hidden style="display:flex;flex-direction:column;flex:1;min-height:0">
     <div class="toolbar">
-      <label>Group by <select id="groupBy"></select></label>
-      <label>Title <select id="titleCol"></select></label>
-      <input type="search" id="search" placeholder="Search a name, ID or anything…">
-      <details class="fields"><summary>Fields ▾</summary><div class="menu" id="fieldMenu"></div></details>
-      <select id="jump" title="Jump to a row"></select>
+      <div class="search"><i class="ph ph-magnifying-glass"></i><input type="search" id="search" placeholder="Find a name, ID or answer   ( / )"></div>
+      <label class="field"><i class="ph ph-squares-four"></i> Group by <select id="groupBy"></select></label>
+      <label class="field"><i class="ph ph-identification-card"></i> Name <select id="titleCol"></select></label>
+      <details class="fields">
+        <summary class="btn"><i class="ph ph-eye-slash"></i> Hide fields</summary>
+        <div class="menu"><p>Unticked fields are hidden on screen and in PDFs.</p><div id="fieldMenu"></div></div>
+      </details>
     </div>
     <div class="chips" id="chips"></div>
-    <div class="strip" id="strip" tabindex="0"></div>
+    <div class="strip" id="strip"></div>
     <div class="status">
       <span id="count"></span>
+      <button class="btn icon ghost" id="prev" title="Previous (←)"><i class="ph ph-caret-left"></i></button>
+      <button class="btn icon ghost" id="next" title="Next (→)"><i class="ph ph-caret-right"></i></button>
       <span class="spacer"></span>
-      <button id="prev" title="Previous (←)">←</button>
-      <button id="next" title="Next (→)">→</button>
-      <button id="mdBtn">Download .md</button>
-      <button class="primary" id="groupPdf">PDF of this group</button>
+      <button class="btn" id="mdBtn" title="A plain-text copy (works with mdpdf)"><i class="ph ph-file-text"></i> Text file</button>
+      <button class="btn primary" id="groupPdf"><i class="ph ph-file-pdf"></i> <span id="groupPdfLabel">Save all as PDF</span></button>
     </div>
   </section>
 </main>
 
+<div class="reader" id="reader" hidden>
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet">
+    <div class="bar">
+      <button class="btn icon ghost" id="rClose" title="Close (Esc)"><i class="ph ph-x"></i></button>
+      <button class="btn icon ghost" id="rMode" title="Full page / side panel (F)"><i class="ph ph-arrows-out-simple"></i></button>
+      <button class="btn icon ghost" id="rPrev" title="Previous (←)"><i class="ph ph-caret-left"></i></button>
+      <button class="btn icon ghost" id="rNext" title="Next (→)"><i class="ph ph-caret-right"></i></button>
+      <span class="pos" id="rPos"></span>
+      <span class="spacer"></span>
+      <button class="btn" id="rPdf"><i class="ph ph-file-pdf"></i> Save as PDF</button>
+    </div>
+    <div class="page" id="rPage"></div>
+  </div>
+</div>
+
 <script src="vendor/xlsx.full.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-const state = { name: "", columns: [], rows: [], hidden: new Set(), groupBy: "", titleCol: "", group: null, query: "", view: [] };
+const state = { name: "", columns: [], rows: [], hidden: new Set(), groupBy: "", titleCol: "", group: null, query: "", view: [], open: -1 };
 
 // ── Loading ──────────────────────────────────────────────────────────────────
 
@@ -169,6 +236,8 @@ function loadWorkbook(data, name) {
   $("search").value = "";
   $("empty").hidden = true;
   $("viewer").hidden = false;
+  $("fileName").hidden = false;
+  $("fileName").innerHTML = `<i class="ph ph-file-csv"></i>${esc(name)} · ${rows.length} rows`;
   setupControls();
   render();
 }
@@ -211,7 +280,7 @@ function options(sel, values, current, blank) {
 }
 
 function setupControls() {
-  options($("groupBy"), state.columns.filter(c => distinct(c).size > 1 && distinct(c).size <= 60), state.groupBy, "No grouping");
+  options($("groupBy"), state.columns.filter(c => distinct(c).size > 1 && distinct(c).size <= 60), state.groupBy, "Nothing");
   options($("titleCol"), state.columns, state.titleCol);
   $("fieldMenu").innerHTML = state.columns.map(c =>
     `<label><input type="checkbox" data-col="${esc(c)}"${state.hidden.has(c) ? "" : " checked"}> ${esc(c)}</label>`).join("");
@@ -225,7 +294,6 @@ function filtered() {
 }
 
 function render() {
-  // chips
   const chips = $("chips");
   if (state.groupBy) {
     const counts = {};
@@ -238,24 +306,25 @@ function render() {
   state.view = filtered();
   const fields = visibleFields();
   $("strip").innerHTML = state.view.length ? state.view.map((r, i) => `
-    <article class="card" data-i="${i}">
+    <article class="card" data-i="${i}" tabindex="0">
       <h2>${hl(r[state.titleCol] || "Untitled")}</h2>
-      <div class="meta">${[state.groupBy && r[state.groupBy], `${i + 1} of ${state.view.length}`].filter(Boolean).map(esc).join(" · ")}</div>
-      ${fields.filter(c => r[c]).map(c => `<p class="q">${esc(c)}</p><p class="a">${linkify(hl(r[c]))}</p>`).join("")}
-      <div class="actions"><button data-pdf="${i}">PDF of this page</button></div>
+      <button class="btn icon ghost open" title="Open"><i class="ph ph-arrows-out-simple"></i></button>
+      <div class="meta">${state.groupBy && r[state.groupBy] ? `<span class="tag">${esc(r[state.groupBy])}</span>` : ""}<span>${i + 1} of ${state.view.length}</span></div>
+      <div class="body">${fields.filter(c => r[c]).map(c => `<p class="q">${esc(c)}</p><p class="a">${hl(r[c])}</p>`).join("")}</div>
+      <div class="hint"><i class="ph ph-book-open-text"></i> Read</div>
     </article>`).join("") : `<p style="color:var(--muted);padding:20px">Nothing matches.</p>`;
   $("strip").scrollLeft = 0;
-  options($("jump"), state.view.map(r => r[state.titleCol] || "Untitled"), null, `Jump to… (${state.view.length})`);
+  document.querySelectorAll(".card .body").forEach(b => b.classList.toggle("clipped", b.scrollHeight > b.clientHeight + 2));
+  $("groupPdfLabel").textContent = state.group !== null ? `Save “${state.group}” as PDF` : state.query ? "Save results as PDF" : "Save all as PDF";
   updateCount();
 }
 
 function visibleFields() { return state.columns.filter(c => !state.hidden.has(c) && c !== state.titleCol); }
 
 function current() {
-  const strip = $("strip"), cards = [...strip.children];
-  const x = strip.scrollLeft + 1;
+  const strip = $("strip");
   let idx = 0;
-  cards.forEach((c, i) => { if (c.offsetLeft - strip.offsetLeft <= x + 20) idx = i; });
+  [...strip.children].forEach((c, i) => { if (c.offsetLeft - strip.offsetLeft <= strip.scrollLeft + 20) idx = i; });
   return idx;
 }
 
@@ -267,6 +336,44 @@ function go(i) {
 function updateCount() {
   const n = state.view.length;
   $("count").textContent = n ? `${current() + 1} of ${n}${state.group !== null ? " in " + state.group : ""}` : "0 rows";
+}
+
+// ── Reader ───────────────────────────────────────────────────────────────────
+
+function openReader(i, push = true) {
+  if (!state.view[i]) return;
+  const first = state.open < 0;
+  state.open = i;
+  const r = state.view[i];
+  $("rPage").innerHTML = `<article>
+      <h1>${hl(r[state.titleCol] || "Untitled")}</h1>
+      <div class="meta">${state.groupBy && r[state.groupBy] ? `<span class="tag"><i class="ph ph-squares-four"></i>${esc(r[state.groupBy])}</span>` : ""}</div>
+      ${visibleFields().filter(c => r[c]).map(c => `<p class="q">${esc(c)}</p><p class="a">${linkify(hl(r[c]))}</p>`).join("")}
+    </article>
+    <p class="keys"><kbd>←</kbd> <kbd>→</kbd> previous / next · <kbd>F</kbd> full page · <kbd>Esc</kbd> close</p>`;
+  $("rPage").scrollTop = 0;
+  $("rPos").textContent = `${i + 1} of ${state.view.length}`;
+  $("rPrev").disabled = i === 0;
+  $("rNext").disabled = i === state.view.length - 1;
+  $("reader").hidden = false;
+  // the browser Back button closes the reader
+  if (first && push) history.pushState({ reader: true }, "");
+}
+
+function closeReader(fromHistory) {
+  if (state.open < 0) return;
+  const i = state.open;
+  state.open = -1;
+  $("reader").hidden = true;
+  go(i);
+  if (!fromHistory && history.state?.reader) history.back();
+}
+
+function setReaderMode(full) {
+  $("reader").classList.toggle("full", full);
+  $("rMode").innerHTML = `<i class="ph ${full ? "ph-sidebar-simple" : "ph-arrows-out-simple"}"></i>`;
+  $("rMode").title = full ? "Side panel (F)" : "Full page (F)";
+  localStorage.setItem("rowbook-reader", full ? "full" : "side");
 }
 
 // ── Markdown + PDF (same look as mdpdf: the themes are mdpdf's own CSS) ──────
@@ -339,6 +446,7 @@ function printPdf(rows) {
   const frame = document.createElement("iframe");
   frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
   frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title(rows))}</title>
+    <base href="${esc(location.href)}">
     <link rel="stylesheet" href="themes/${$("theme").value}.css">
     <style>
       @page { size: A4; margin: 12mm; }
@@ -349,7 +457,7 @@ function printPdf(rows) {
       p strong { break-after: avoid; }
     </style></head><body>${toHtml(rows)}</body></html>`;
   frame.onload = () => {
-    // give local fonts a beat to settle, then open the print dialog (choose "Save as PDF")
+    // give fonts a beat to settle, then open the print dialog (choose "Save as PDF")
     setTimeout(() => { frame.contentWindow.focus(); frame.contentWindow.print(); setTimeout(() => frame.remove(), 1000); }, 300);
   };
   document.body.appendChild(frame);
@@ -366,7 +474,7 @@ function download(name, text) {
 // ── Events ───────────────────────────────────────────────────────────────────
 
 $("openBtn").onclick = $("openBtn2").onclick = () => $("file").click();
-$("file").onchange = e => e.target.files[0] && readFile(e.target.files[0]);
+$("file").onchange = e => { e.target.files[0] && readFile(e.target.files[0]); e.target.value = ""; };
 $("sheetBtn").onclick = () => $("sheetUrl").value.trim() && loadSheet($("sheetUrl").value.trim());
 $("sheetUrl").onkeydown = e => e.key === "Enter" && $("sheetBtn").click();
 
@@ -374,13 +482,19 @@ $("sheetUrl").onkeydown = e => e.key === "Enter" && $("sheetBtn").click();
 ["dragleave", "drop"].forEach(t => document.addEventListener(t, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
 document.addEventListener("drop", e => e.dataTransfer.files[0] && readFile(e.dataTransfer.files[0]));
 
+function setMode(mode) {
+  document.documentElement.dataset.mode = mode;
+  $("modeBtn").innerHTML = `<i class="ph ${mode === "dark" ? "ph-sun" : "ph-moon"}"></i>`;
+}
+setMode(document.documentElement.dataset.mode);
 $("modeBtn").onclick = () => {
   const mode = document.documentElement.dataset.mode === "dark" ? "light" : "dark";
-  document.documentElement.dataset.mode = mode;
+  setMode(mode);
   localStorage.setItem("rowbook-mode", mode);
 };
 $("theme").value = localStorage.getItem("rowbook-theme") || "apple";
 $("theme").onchange = () => localStorage.setItem("rowbook-theme", $("theme").value);
+setReaderMode(localStorage.getItem("rowbook-reader") === "full");
 
 $("groupBy").onchange = e => { state.groupBy = e.target.value; state.group = null; render(); };
 $("titleCol").onchange = e => { state.titleCol = e.target.value; render(); };
@@ -396,19 +510,30 @@ $("fieldMenu").onchange = e => {
   e.target.checked ? state.hidden.delete(col) : state.hidden.add(col);
   const i = current(); render(); $("strip").children[i]?.scrollIntoView({ inline: "start", block: "nearest" });
 };
-$("jump").onchange = e => { if (e.target.selectedIndex > 0) go(e.target.selectedIndex - 1); e.target.selectedIndex = 0; };
+document.addEventListener("click", e => { if (!e.target.closest("details.fields")) $("viewer").querySelector("details.fields").open = false; });
 $("strip").onscroll = () => requestAnimationFrame(updateCount);
-$("strip").onclick = e => { const b = e.target.closest("[data-pdf]"); if (b) printPdf([state.view[+b.dataset.pdf]]); };
+$("strip").onclick = e => { const c = e.target.closest(".card"); if (c && !e.target.closest("a")) openReader(+c.dataset.i); };
 $("prev").onclick = () => go(Math.max(0, current() - 1));
 $("next").onclick = () => go(Math.min(state.view.length - 1, current() + 1));
 $("groupPdf").onclick = () => state.view.length && printPdf(state.view);
 $("mdBtn").onclick = () => state.view.length && download(`${title(state.view).replace(/[\\/:*?"<>|]/g, "")}.md`, toMarkdown(state.view));
 
+$("scrim").onclick = $("rClose").onclick = () => closeReader();
+$("rMode").onclick = () => setReaderMode(!$("reader").classList.contains("full"));
+$("rPrev").onclick = () => openReader(state.open - 1);
+$("rNext").onclick = () => openReader(state.open + 1);
+$("rPdf").onclick = () => printPdf([state.view[state.open]]);
+window.addEventListener("popstate", () => closeReader(true));
+
 document.addEventListener("keydown", e => {
-  if ($("viewer").hidden || /INPUT|SELECT/.test(e.target.tagName)) return;
-  if (e.key === "ArrowRight") { e.preventDefault(); $("next").click(); }
-  if (e.key === "ArrowLeft") { e.preventDefault(); $("prev").click(); }
-  if (e.key === "/") { e.preventDefault(); $("search").focus(); }
+  if ($("viewer").hidden || /INPUT|SELECT/.test(e.target.tagName) || e.metaKey || e.ctrlKey) return;
+  const reading = state.open >= 0;
+  if (e.key === "ArrowRight") { e.preventDefault(); reading ? $("rNext").click() : $("next").click(); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); reading ? $("rPrev").click() : $("prev").click(); }
+  else if (e.key === "Escape" && reading) closeReader();
+  else if ((e.key === "f" || e.key === "F") && reading) $("rMode").click();
+  else if (e.key === "Enter" && !reading && e.target.classList.contains("card")) openReader(+e.target.dataset.i);
+  else if (e.key === "/" && !reading) { e.preventDefault(); $("search").focus(); }
 });
 </script>
 </body>
