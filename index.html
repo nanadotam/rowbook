@@ -110,6 +110,10 @@
   .drop .row { display: flex; gap: 8px; margin-top: 20px; }
   .drop .row .search { flex: 1; }
   .privacy { font-size: 13px; margin-top: 18px !important; display: flex; gap: 6px; align-items: center; justify-content: center; }
+  .credit { font-size: 12.5px; margin-top: 14px !important; }
+  .credit a { color: var(--muted); text-decoration: none; font-weight: 600; }
+  .credit a:hover { color: var(--accent); }
+  a.btn { color: var(--ink); text-decoration: none; }
   .error { color: #d93025; font-size: 13px; min-height: 1.2em; }
 
   /* ── Reader: Notion-style side peek, or full page ── */
@@ -183,6 +187,7 @@
   <div class="brand"><img src="icon.svg" alt="">Rowbook <span class="file" id="fileName" hidden></span></div>
   <button class="btn" id="openBtn"><i class="ph ph-folder-open"></i> Open file</button>
   <button class="btn icon" id="modeBtn" title="Light / dark"><i class="ph ph-moon"></i></button>
+  <a class="btn icon" href="https://github.com/nanadotam/rowbook" target="_blank" rel="noopener" title="Rowbook on GitHub"><i class="ph ph-github-logo"></i></a>
   <input type="file" id="file" accept=".csv,.tsv,.xlsx,.xls,.xlsm,.ods" hidden>
 </header>
 
@@ -199,6 +204,7 @@
       </div>
       <p class="error" id="error"></p>
       <p class="privacy"><i class="ph ph-lock-simple"></i> Your file stays in this browser tab. Nothing is uploaded or saved.</p>
+      <p class="credit">Made by <a href="https://nanaamoako.com" target="_blank" rel="noopener">Nana Amoako</a> · <a href="https://github.com/nanadotam/rowbook" target="_blank" rel="noopener"><i class="ph ph-github-logo"></i> Source on GitHub</a></p>
     </div>
   </section>
 
